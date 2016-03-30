@@ -1,10 +1,16 @@
 #!/usr/bin/perl
 require 5.12.0;     # might run on 5.10 too
 
-use local::lib './extlib';
+BEGIN {
+    # if there is a local directory "extlib" put it into INC
+    if ( -d "extlib" ) {
+        use local::lib 'extlib';
+    }
+}
 
-use constant VERSION => 0.26;
-use constant OVERRIDE_SIZECHECK => true;
+use constant VERSION => 0.26.4;
+use constant BUILD => 4;
+use constant OVERRIDE_SIZECHECK => false;
 
 use Modern::Perl;
 use autodie;
@@ -13,14 +19,15 @@ use autodie;
 
 ## login-via-file
 
+use YAML;
 use YAML::Any;
 use Data::Dumper;
 
 my $login_file = "login.yml";
-my @desura_hosts = ( "http://api.desura.com", "ips...." );
-my %config = (
-    host => $desura_hosts[0]
-);
+#my @desura_hosts = ( "http://api.desura.com", "ips...." );
+#my %config = (
+#    host => $desura_hosts[0]
+#);
 
 if ( ! -e $login_file ) {
     print("!!! Require to have login data present in $login_file");
@@ -28,7 +35,7 @@ if ( ! -e $login_file ) {
 }
 
 my ($login) = YAML::Any::LoadFile( $login_file );
-print Dumper( $login );
+#print Dumper( $login );
 
 ## Login 2 Desura
 
@@ -140,7 +147,8 @@ my $xml = XML::Twig->new(
 $xml->parse( $response->{content} );
 
 my $statuscode = $xml->root->first_child('status')->{'att'}->{'code'};
-say "remove cookies or change login details please" if $statuscode == 104;
+say "deauthed - restart please" if $statuscode == 104;
+unlink "cookies.yml" if $statuscode == 104;
 die "status: " . $statuscode if ( $statuscode != 0 );
 
 say "writing memberlist";
@@ -179,7 +187,7 @@ foreach my $item ( @items ) {
     my $mcf_file = $basepath . "/" . $item->{'branchid'} . "-" . $item->{'branchplatform'} . ".mcf";
     if ( -e $mcf_file ) {
         if ( OVERRIDE_SIZECHECK ) {
-            say 'file exists and checks are overriden... skipping!'
+            say 'file exists and checks are overriden... skipping!';
             next;
         }
 
